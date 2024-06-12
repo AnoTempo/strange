@@ -1,1 +1,53 @@
 !Hello World!
+
+    try {
+        # Create and open a connection to the SQLite database
+        $connectionString = "Data Source=$dbPath;Version=3;"
+        $connection = New-Object System.Data.SQLite.SQLiteConnection($connectionString)
+        $connection.Open()
+
+        # Get all table names
+        $tables = $connection.GetSchema("Tables")
+
+        $containsKeyword = $false
+
+        # Iterate through all tables
+        foreach ($table in $tables.Rows) {
+            $tableName = $table["TABLE_NAME"]
+
+            # Query the table to get the schema (columns)
+            $commandText = "PRAGMA table_info([$tableName]);"
+            $command = $connection.CreateCommand()
+            $command.CommandText = $commandText
+
+            $adapter = New-Object System.Data.SQLite.SQLiteDataAdapter $command
+            $dataTable = New-Object System.Data.DataTable
+            $adapter.Fill($dataTable)
+
+            # Check if any column name contains the keyword
+            foreach ($row in $dataTable.Rows) {
+                if ($row["name"] -like "*$keyword*") {
+                    $containsKeyword = $true
+                    break
+                }
+            }
+
+            if ($containsKeyword) {
+                break
+            }
+        }
+
+        # Output the result
+        if ($containsKeyword) {
+            Write-Output "yes"
+        } else {
+            Write-Output "no"
+        }
+
+        # Clean up
+        $connection.Close()
+    } catch {
+        # Output error message if the file is not a valid SQLite database
+        Write-Output "The file $dbPath is not a valid SQLite database."
+    }
+}
